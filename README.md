@@ -15,7 +15,7 @@ This repository is the final, consolidated version of the project's codebase, ma
 The core logic, algorithms, and GUI development of this system were engineered and authored by me (Thu). During the earlier stages of the project, the foundational code was distributed across different repositories created by my team members for collaborative setup. 
 
 To view the complete commit history and the evolution of the early development phases that I contributed to, please refer to the original legacy repositories:
-*   📦 **Phase 1 Repository:** ProjectReceptionRobot (https://github.com/hcmutduygit/ProjectReceptionRobot)
+*   📦 **Phase 1 Repository:** ProjectReceptionRobot - (https://github.com/hcmutduygit/ProjectReceptionRobot)
 *   📦 **Phase 2 Repository:** UI_MONITORING - (https://github.com/hoaiphu1002/UI_MONITORING)
 
 This new repository is created to unify my work, establish proper ownership, and provide a clean, maintainable architecture moving forward.
