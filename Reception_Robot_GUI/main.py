@@ -48,6 +48,10 @@ class MainWindow(QMainWindow):
         self.last_goal = None
         self.HOME_NAME = "Home"   
 
+        # Rotate 
+        self.home_rotation_timer = QTimer()
+        self.home_rotation_timer.setSingleShot(True)
+
         # list user
         self.registered_users = [
             {
@@ -210,10 +214,16 @@ class MainWindow(QMainWindow):
         # ===== AUTO RETURN =====
         self.last_goal = place
         self.auto_return_timer.stop()  # reset timer
+        self.home_rotation_timer.stop()
 
     # ================= ARRIVAL =================
     def handle_arrival_signal(self, arrived):
         if arrived == 1 and hasattr(self, 'admin_location_tab'):
+            if getattr(self, '_is_processing_arrival', False):
+                return
+            self._is_processing_arrival = True
+            QTimer.singleShot(3000, lambda: setattr(self, '_is_processing_arrival', False))
+
             self.ui.robot_mode_2.setCurrentWidget(self.ui.page_6)
             self.admin_location_tab.logger.stop_logging()
             self.ui.robot_status.setText("Idle")
@@ -222,71 +232,36 @@ class MainWindow(QMainWindow):
             # ===== START TIMER =====
             if self.last_goal != self.HOME_NAME:
                 print("⏱ Start 10s auto return timer")
-                self.auto_return_timer.start(10000) # CHỈNH THỜI GIAN CHỜ 
+                self.auto_return_timer.start(10000)
 
             # If we just arrived at Home, compute deviation using real heading vs Home->wp15 (0-degree reference).
             if self.last_goal == self.HOME_NAME:
                 try:
-                    planner = self.admin_location_tab.planner
-                    if 'wp15' in planner.waypoints and 'Home' in planner.all_nodes:
-                        home_pt = np.array(planner.all_nodes['Home'], dtype=float)
-                        wp15_pt = np.array(planner.waypoints['wp15'], dtype=float)
-
-                        heading_deg = getattr(self.admin_location_tab, '_display_heading_deg', None)
-                        if heading_deg is None:
-                            theta_now = float(self.admin_location_tab.last_position[2])
-                            heading_deg = float(self.admin_location_tab._theta_to_scene_deg(theta_now))
-
-                        # Build a synthetic incoming point from current heading so we can reuse planner math/visualization.
-                        heading_rad = np.deg2rad(float(heading_deg))
-                        heading_vec = np.array([np.cos(heading_rad), np.sin(heading_rad)], dtype=float)
-                        prev_pt = home_pt - heading_vec * 80.0
-
-
-                        angle_deg, sign, dot = planner._compute_angle_between(prev_pt, home_pt, wp15_pt)
-                        planner.last_deviation_angle = angle_deg
-                        planner.last_deviation_sign = sign
-                        planner.last_deviation_signed_angle = sign * angle_deg
-                        planner.last_deviation_angle_360 = (planner.last_deviation_signed_angle + 360.0) % 360.0
-                        planner.last_deviation_dot = dot
-                        normalized_angle = int(planner.last_deviation_angle_360)
-                        planner._draw_angle_visual(prev_pt, home_pt, wp15_pt, angle_deg, sign, normalized_angle)
-
+                    angle_to_publish = self.admin_location_tab.calculate_home_rotation_angle()
+                    if angle_to_publish is not None:
+                    
                         # Hiển thị góc lệch lên GUI
                         if hasattr(self.ui, 'label_deviation_angle_2'):
-                            self.ui.label_deviation_angle_2.setText(f"Xoay (robot so với đường Home→wp15): {normalized_angle}°")
+                            self.ui.label_deviation_angle_2.setText(f"Xoay (robot so với đường Home→wp15): {angle_to_publish}°")
                             font = self.ui.label_deviation_angle_2.font()
                             font.setPointSize(12)
                             self.ui.label_deviation_angle_2.setFont(font)
 
-                        def _publish_xoay_angle():
-                            pub = AnglePublisher()
-                            try:
-                                pub.topic = get_topic("xoay")
-                            except Exception:
-                                pass
-                            pub.publish_angle(normalized_angle)
+                        try: self.home_rotation_timer.timeout.disconnect() 
+                        except TypeError: pass # Bỏ qua lỗi nếu chưa connect lần nào
 
-                        # Publish twice when robot/arrical is true, each publish 5 seconds apart.
-                        QTimer.singleShot(0, _publish_xoay_angle)
-                        QTimer.singleShot(5000, _publish_xoay_angle)
+                        self.home_rotation_timer.timeout.connect(lambda: AnglePublisher().publish_angle(angle_to_publish))
+                        self.home_rotation_timer.start(5000)
+                        print(f"[Xoay] Heading at Home: {angle_to_publish}")
 
-                        print(
-                            f"[ARRIVAL] Heading deviation at Home: "
-                            f"signed={planner.last_deviation_signed_angle:.1f}°, "
-                            f"angle_360={planner.last_deviation_angle_360:.1f}°, "
-                            f"publish_times=2, interval_ms=5000, value={normalized_angle}"
-                        )
                 except Exception as e:
                     print(f"[MQTT ANGLE] Compute/publish on arrival failed: {e}")
 
     # ================= AUTO RETURN =================
     def auto_return_home(self):
-        print("⚠️ Auto return HOME")
-
+        print("🏠 Auto return HOME")
         if self.last_goal == self.HOME_NAME:
             return
-
         self.send_goal(self.HOME_NAME)
 
     # ================= SHUTDOWN =================

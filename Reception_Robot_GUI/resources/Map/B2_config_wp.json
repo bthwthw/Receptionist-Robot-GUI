@@ -27,7 +27,7 @@
   },  
 
   "connections": {
-    "wp1": ["wp2", "wp14", "Home"],
+    "wp1": ["wp2", "wp14", "wp15"],
     "wp2": ["wp1", "wp3"],
     "wp3": ["wp2", "wp4"],
     "wp4": ["wp3", "wp5"],
@@ -37,10 +37,11 @@
     "wp12": ["wp11", "wp13"],
     "wp13": ["wp12", "wp14", "Chemistry Lab"],
     "wp14": ["wp1", "wp13", "Chemistry Lab"],
+    "wp15": ["wp1", "Home", "Library", "Football court"],
 
-    "Home": ["wp1", "Library", "Football court"],
-    "Library": ["Home"],
-    "Football court": ["Home"],
+    "Home": ["wp15"],
+    "Library": ["wp15"],
+    "Football court": ["wp15"],
 
     "Meeting Room": ["wp5", "Restroom"],
     "Restroom": ["wp5", "Meeting Room", "Biological Lab"],

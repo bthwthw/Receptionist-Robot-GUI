@@ -8,6 +8,7 @@ from datetime import datetime
 from pathplanning_fixedwp import PathPlanner
 from logger import PathLogger
 from MQTT.publisher_waypoints import WaypointsPublisher
+from MQTT.publisher_angle import AnglePublisher
 
 class MapGraphicsView(QGraphicsView):
     def __init__(self, parent=None):
@@ -121,9 +122,7 @@ class LocationTab(QWidget):
                 self.map_origin = (map_config['origin'][0], map_config['origin'][1])
         except Exception as e:
             # Giá trị dự phòng nếu không đọc được file
-            self.map_resolution = 0.05
-            self.map_origin = (-1.545, -12.181) 
-            print(f"Error reading YAML, using defaults: {e}")
+            print(f"Error reading YAML: {e}")
 
     # ==========================================
     #               ROBOT GRAPHICS
@@ -139,7 +138,7 @@ class LocationTab(QWidget):
         self.robot_w = pixmap.width()
         self.robot_h = pixmap.height()
         self.robot_item.setTransformOriginPoint(self.robot_w / 2, self.robot_h / 2)
-        self.robot_icon_forward_offset_deg = 90.0  # Nếu icon robot hướng lên trên, chỉnh lại nếu cần
+        self.robot_icon_forward_offset_deg = 90.0 
         self.map_scene.addItem(self.robot_item)
 
     # ==========================================
@@ -154,7 +153,6 @@ class LocationTab(QWidget):
 
         self.robot_pos = (px, py)
         self.robot_item.setPos(px - self.robot_w/2, py - self.robot_h/2)
-
 
         # --- Vẽ mũi tên hướng robot ---
         heading_deg = -theta if abs(theta) > 2 * np.pi else -np.degrees(theta)
@@ -202,7 +200,6 @@ class LocationTab(QWidget):
         """Hàm này nhận dữ liệu x, y, theta từ MQTT Manager"""
         self.last_position = [x, y, theta]
 
-    # ... (Các hàm clear_trajectory, update_trajectory, plan_path giữ nguyên như cũ)
     def clear_trajectory(self):
         for item in self.trajectory_items:
             self.map_scene.removeItem(item)
@@ -222,6 +219,88 @@ class LocationTab(QWidget):
 
     def get_goal_names(self):
         return list(self.goals.keys())
+    
+    def calculate_home_rotation_angle(self):
+        """Calculate the angle the robot needs to rotate to face the direction from Home to wp15"""
+        try:
+            planner = self.planner
+            if 'wp15' not in planner.waypoints or 'Home' not in planner.all_nodes:
+                return None
+
+            # 1. Lấy tọa độ Pixel và chuyển sang Mét
+            hx, hy = planner.all_nodes['Home']
+            wpx, wpy = planner.waypoints['wp15']
+
+            home_m_x = self.map_origin[0] + hx * self.map_resolution
+            home_m_y = self.map_origin[1] + (self.map_height - hy) * self.map_resolution
+            wp15_m_x = self.map_origin[0] + wpx * self.map_resolution
+            wp15_m_y = self.map_origin[1] + (self.map_height - wpy) * self.map_resolution
+
+            # 2. Xây dựng vector mục tiêu (vec_next) từ Home -> wp15
+            vec_next = np.array([wp15_m_x - home_m_x, wp15_m_y - home_m_y], dtype=float)
+            norm = np.linalg.norm(vec_next) + 1e-8
+            vec_next_norm = vec_next / norm
+
+            # 3. Lấy vị trí và hướng hiện tại của robot
+            cur_theta_raw = float(self.last_position[2])
+            if abs(cur_theta_raw) > 2 * np.pi: # Nếu người dùng gõ số > 6.28 (vd: 90, 180)
+                cur_theta_rad = np.deg2rad(cur_theta_raw)
+            else:
+                cur_theta_rad = cur_theta_raw
+            
+            # Tính vector heading hiện tại của robot
+            heading_vec = np.array([np.cos(cur_theta_rad), np.sin(cur_theta_rad)], dtype=float)
+
+            # 4. Tính toán Delta Angle 
+            dot = np.clip(np.dot(heading_vec, vec_next_norm), -1.0, 1.0)
+            angle_rad = np.arccos(dot)
+            sign = np.sign(heading_vec[0] * vec_next_norm[1] - heading_vec[1] * vec_next_norm[0])
+            
+            # normalize angle to [0, 360)
+            angle_deg = np.degrees(angle_rad) * sign
+            normalized_angle = int((angle_deg + 360.0) % 360.0)
+            
+            return normalized_angle
+
+        except Exception as e:
+            print(f"Home rotation error: {e}")
+            return None
+    
+    def _handle_auto_rotation(self):
+        """robot turn to face the first waypoint when starting navigation"""
+        try:
+            curx, cury, theta_rad = self.last_position
+            
+            wp_next = None
+            for wp in self.full_plan_points:
+                dist = np.hypot(wp['x'] - curx, wp['y'] - cury)
+                # Nếu khoảng cách lớn hơn 10cm (0.1m) thì mới được coi là điểm đến tiếp theo
+                if dist > 0.1: 
+                    wp_next = wp
+                    break
+
+            vec_next = np.array([wp_next['x'] - curx, wp_next['y'] - cury], dtype=float)
+            norm = np.linalg.norm(vec_next) + 1e-8
+            vec_next_norm = vec_next / norm
+
+            # Tính vector heading hiện tại của robot
+            heading_vec = np.array([np.cos(theta_rad), np.sin(theta_rad)], dtype=float)
+
+            # delta angle 
+            dot = np.clip(np.dot(heading_vec, vec_next_norm), -1.0, 1.0)
+            angle_rad = np.arccos(dot)
+            sign = np.sign(heading_vec[0] * vec_next_norm[1] - heading_vec[1] * vec_next_norm[0])
+
+            # normalize angle to [0, 360)
+            angle_deg = np.degrees(angle_rad) * sign
+            angle_to_publish = int((angle_deg + 360.0) % 360.0)
+
+            pub = AnglePublisher()
+            pub.publish_angle(angle_to_publish)
+            print(f"[Xoay]: {angle_to_publish}°")
+
+        except Exception as e:
+            print(f"Auto rotation error: {e}")
 
     def plan_path(self, goal):
         ref_point = None
@@ -256,3 +335,6 @@ class LocationTab(QWidget):
         waypoints_json = json.dumps(self.full_plan_points, indent=2)
         publisher = WaypointsPublisher()
         publisher.publish_waypoints(waypoints_json)
+
+        if len(self.full_plan_points) >= 2:
+            self._handle_auto_rotation()
