@@ -107,7 +107,8 @@ class PathLogger(QObject):
         if not hasattr(self, 'full_plan_points') or len(self.full_plan_points) < 2:
             print("No planned path")
             return
-
+        
+        os.makedirs(self.log_dir, exist_ok=True)
         timestamp_str = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
         full_path = os.path.join(self.log_dir, f"{timestamp_str}.csv")
 

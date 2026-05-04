@@ -36,7 +36,7 @@ class LocationTab(QWidget):
         self.map_scene = QGraphicsScene()
         self.ui.setScene(self.map_scene)
 
-        where = "B1"
+        where = "B2"
         log_dir = f"Reception_Robot_GUI/log_path/{where}/"
         wp_path = f"Reception_Robot_GUI/resources/Map/{where}_config_wp.json"
         map_path = f"Reception_Robot_GUI/resources/Map/{where}_map.pgm"
