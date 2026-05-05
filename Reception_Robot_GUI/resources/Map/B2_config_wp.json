@@ -9,7 +9,7 @@
     "wp12": [863, 438],
     "wp13": [742, 440],
     "wp14": [416, 460],
-    "wp15": [150, 476]
+    "Href": [150, 476]
   },
 
   "goals": {
@@ -37,7 +37,7 @@
     "wp12": ["wp11", "wp13"],
     "wp13": ["wp12", "wp14", "Chemistry Lab"],
     "wp14": ["wp1", "wp13", "Chemistry Lab"],
-    "wp15": ["wp1", "Home", "Library", "Football court"],
+    "Href": ["wp1", "Home", "Library", "Football court"],
 
     "Home": ["wp15"],
     "Library": ["wp15"],

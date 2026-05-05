@@ -248,7 +248,7 @@ class MainWindow(QMainWindow):
                             self.ui.label_deviation_angle_2.setFont(font)
 
                         try: self.home_rotation_timer.timeout.disconnect() 
-                        except TypeError: pass # Bỏ qua lỗi nếu chưa connect lần nào
+                        except TypeError: pass 
 
                         self.home_rotation_timer.timeout.connect(lambda: AnglePublisher().publish_angle(angle_to_publish))
                         self.home_rotation_timer.start(5000)

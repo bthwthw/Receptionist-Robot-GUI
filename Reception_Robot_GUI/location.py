@@ -37,7 +37,7 @@ class LocationTab(QWidget):
         self.map_scene = QGraphicsScene()
         self.ui.setScene(self.map_scene)
 
-        where = "B2"
+        where = "B1"
         log_dir = f"Reception_Robot_GUI/log_path/{where}/"
         wp_path = f"Reception_Robot_GUI/resources/Map/{where}_config_wp.json"
         map_path = f"Reception_Robot_GUI/resources/Map/{where}_map.pgm"
@@ -221,23 +221,23 @@ class LocationTab(QWidget):
         return list(self.goals.keys())
     
     def calculate_home_rotation_angle(self):
-        """Calculate the angle the robot needs to rotate to face the direction from Home to wp15"""
+        """Calculate the angle the robot needs to rotate to face the direction from Home to Href"""
         try:
             planner = self.planner
-            if 'wp15' not in planner.waypoints or 'Home' not in planner.all_nodes:
+            if 'Href' not in planner.waypoints or 'Home' not in planner.all_nodes:
                 return None
 
             # 1. Lấy tọa độ Pixel và chuyển sang Mét
             hx, hy = planner.all_nodes['Home']
-            wpx, wpy = planner.waypoints['wp15']
+            wpx, wpy = planner.waypoints['Href']
 
             home_m_x = self.map_origin[0] + hx * self.map_resolution
             home_m_y = self.map_origin[1] + (self.map_height - hy) * self.map_resolution
-            wp15_m_x = self.map_origin[0] + wpx * self.map_resolution
-            wp15_m_y = self.map_origin[1] + (self.map_height - wpy) * self.map_resolution
+            href_m_x = self.map_origin[0] + wpx * self.map_resolution
+            href_m_y = self.map_origin[1] + (self.map_height - wpy) * self.map_resolution
 
-            # 2. Xây dựng vector mục tiêu (vec_next) từ Home -> wp15
-            vec_next = np.array([wp15_m_x - home_m_x, wp15_m_y - home_m_y], dtype=float)
+            # 2. Xây dựng vector mục tiêu (vec_next) từ Home -> Href
+            vec_next = np.array([href_m_x - home_m_x, href_m_y - home_m_y], dtype=float)
             norm = np.linalg.norm(vec_next) + 1e-8
             vec_next_norm = vec_next / norm
 
