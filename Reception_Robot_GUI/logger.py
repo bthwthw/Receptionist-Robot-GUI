@@ -37,14 +37,14 @@ class PathLogger(QObject):
         # Tạo timer mới mỗi lần start (giống hệt code gốc)
         self.log_timer = QTimer(self)
         self.log_timer.timeout.connect(self.logging_step)
-        self.log_timer.start(100)  # 10 Hz check
+        self.log_timer.start(20)  # 50 Hz check
 
     def logging_step(self):
         if not self.logging_active or len(self.full_plan_points) < 2:
             return
 
         now = time.time()
-        if now - self.last_log_time < 1.0:
+        if now - self.last_log_time < 0.02:
             return
         self.last_log_time = now
 
