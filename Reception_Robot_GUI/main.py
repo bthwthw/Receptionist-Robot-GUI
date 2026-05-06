@@ -232,14 +232,13 @@ class MainWindow(QMainWindow):
             # ===== START TIMER =====
             if self.last_goal != self.HOME_NAME:
                 print("⏱ Start 10s auto return timer")
-                self.auto_return_timer.start(10000)
+                self.auto_return_timer.start(30000)
 
             # If we just arrived at Home, compute deviation using real heading vs Home->wp15 (0-degree reference).
             if self.last_goal == self.HOME_NAME:
                 try:
                     angle_to_publish = self.admin_location_tab.calculate_home_rotation_angle()
                     if angle_to_publish is not None:
-                    
                         # Hiển thị góc lệch lên GUI
                         if hasattr(self.ui, 'label_deviation_angle_2'):
                             self.ui.label_deviation_angle_2.setText(f"Xoay (robot so với đường Home→wp15): {angle_to_publish}°")
@@ -247,12 +246,20 @@ class MainWindow(QMainWindow):
                             font.setPointSize(12)
                             self.ui.label_deviation_angle_2.setFont(font)
 
-                        try: self.home_rotation_timer.timeout.disconnect() 
-                        except TypeError: pass 
+                        # Gửi tín hiệu xoay 2 lần, mỗi lần cách nhau 5 giây
+                        try:
+                            self.home_rotation_timer.timeout.disconnect()
+                        except TypeError:
+                            pass
 
-                        self.home_rotation_timer.timeout.connect(lambda: AnglePublisher().publish_angle(angle_to_publish))
-                        self.home_rotation_timer.start(5000)
-                        print(f"[Xoay] Heading at Home: {angle_to_publish}")
+                        # Gửi lần đầu ngay khi về Home
+                        AnglePublisher().publish_angle(angle_to_publish)
+                        print(f"[Xoay] Heading at Home (lần 1): {angle_to_publish}")
+                        # Sau 5s gửi lần 2
+                        QTimer.singleShot(5000, lambda: (
+                            AnglePublisher().publish_angle(angle_to_publish),
+                            print(f"[Xoay] Heading at Home (lần 2): {angle_to_publish}")
+                        ))
 
                 except Exception as e:
                     print(f"[MQTT ANGLE] Compute/publish on arrival failed: {e}")
