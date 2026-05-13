@@ -74,8 +74,8 @@ class MainWindow(QMainWindow):
         self.battery_manager.start_battery_subscriber()
 
         # ===== CONTROL =====
-        self.camera_controller = CameraController()
-        self.shared_browser = self.camera_controller.get_browser()
+        # self.camera_controller = CameraController()
+        # self.shared_browser = self.camera_controller.get_browser()
 
         self.velocity_manager = VelocityManager(self.ui)
         self.velocity_manager.start_velocity_subscriber()
@@ -120,7 +120,7 @@ class MainWindow(QMainWindow):
             self.ui.stackedWidget.setCurrentWidget(self.ui.robot)
             self.ui.stackedWidget_2.setCurrentWidget(self.ui.page_control_2)
 
-            self.admin_camera_tab = CameraTab(self.ui.camera_2, self.shared_browser)
+            # self.admin_camera_tab = CameraTab(self.ui.camera_2, self.shared_browser)
     
             self.admin_location_tab = LocationTab(self.ui.view_map_2)
             self.admin_location_tab.logger.cte_signal.connect(self.telemetry_tab.update_cte)
