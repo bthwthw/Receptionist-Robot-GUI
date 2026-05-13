@@ -84,15 +84,22 @@ class PathLogger(QObject):
         error = np.hypot(xr - plan_x, yr - plan_y)
         self.cte_signal.emit(error)
 
+        # Tính dist_to_next trước khi in log
+        dist_to_next = np.hypot(xr - x2, yr - y2)
+        # Debug print
+        print(f"[LOGGER] idx={self.current_segment_idx}, t_raw={t_raw:.3f}, dist_to_next={dist_to_next:.3f}, actual=({actual_x:.3f},{actual_y:.3f}), plan=({plan_x:.3f},{plan_y:.3f}), error={error:.3f}")
+
         # Ghi log
         self.log_data.append((timestamp, plan_x, plan_y, actual_x, actual_y, error))
 
         # Kiểm tra chuyển đoạn
-        dist_to_next = np.hypot(xr - x2, yr - y2)
         # pass next wp or close enough to next wp, move to next segment
         if (t_raw >= 1.0 or dist_to_next < self.threshold_to_next):
             if self.current_segment_idx + 2 < len(self.full_plan_points):
+                print(f"[LOGGER] Move to next segment: {self.current_segment_idx+1}")
                 self.current_segment_idx += 1
+            else:
+                print(f"[LOGGER] End of path reached.")
 
     def stop_logging(self):
         if hasattr(self, 'log_timer') and self.log_timer.isActive():

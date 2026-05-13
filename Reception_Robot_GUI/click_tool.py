@@ -102,7 +102,7 @@ class MapClickWindow(QMainWindow):
         
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    map_path = "Reception_Robot_GUI/resources/Map/B2_map.pgm"
+    map_path = "Reception_Robot_GUI/resources/Map/B1_map.pgm"
     window = MapClickWindow(map_path)
     window.show()
     sys.exit(app.exec())

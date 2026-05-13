@@ -37,7 +37,7 @@ class LocationTab(QWidget):
         self.map_scene = QGraphicsScene()
         self.ui.setScene(self.map_scene)
 
-        where = "B1"
+        where = "B2"
         log_dir = f"Reception_Robot_GUI/log_path/{where}/"
         wp_path = f"Reception_Robot_GUI/resources/Map/{where}_config_wp.json"
         map_path = f"Reception_Robot_GUI/resources/Map/{where}_map.pgm"
@@ -54,7 +54,7 @@ class LocationTab(QWidget):
         self.goals = self.planner.goals 
         
         # Home cũng lấy từ dữ liệu tập trung
-        home_coords = self.goals.get("Home", (825, 394))
+        home_coords = self.goals.get("Home", (121, 476))
         self.home_px, self.home_py = home_coords
 
         # Load map và các thiết lập khác
@@ -224,7 +224,7 @@ class LocationTab(QWidget):
         """Calculate the angle the robot needs to rotate to face the direction from Home to Href"""
         try:
             planner = self.planner
-            if 'Href' not in planner.waypoints or 'Home' not in planner.all_nodes:
+            if 'wp15' not in planner.waypoints or 'Home' not in planner.all_nodes:
                 return None
 
             # 1. Lấy tọa độ Pixel và chuyển sang Mét
@@ -336,5 +336,5 @@ class LocationTab(QWidget):
         publisher = WaypointsPublisher()
         publisher.publish_waypoints(waypoints_json)
 
-        if len(self.full_plan_points) >= 2:
-            self._handle_auto_rotation()
+        # if len(self.full_plan_points) >= 2:
+        #     self._handle_auto_rotation()
